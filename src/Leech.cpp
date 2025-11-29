@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <limits>
 #include <cstdlib>
+#include <cctype>
 
 static std::vector<uint32> const& Leech_GetRequiredItemIds()
 {
@@ -57,6 +58,8 @@ public:
             return;
         }
         Player* player = isPet ? attacker->GetOwner()->ToPlayer() : attacker->ToPlayer();
+		if (!player)
+			return;
 
         if (sConfigMgr->GetOption<bool>("Leech.DungeonsOnly", true) && !(player->GetMap()->IsDungeon()))
         {
@@ -76,8 +79,27 @@ public:
 		}
 
         auto leechAmount = sConfigMgr->GetOption<float>("Leech.Amount", 0.05f);
-        auto bp1 = static_cast<int32>(leechAmount * float(damage));
-        player->CastCustomSpell(attacker, SPELL_HEAL, &bp1, nullptr, nullptr, true);
+		auto bp1 = static_cast<int32>(leechAmount * float(damage));
+		
+		Unit* caster = attacker;
+		Unit* target = attacker;
+		
+		std::string petMode = sConfigMgr->GetOption<std::string>("Leech.PetDamage", "pet");
+		if (isPet)
+		{
+			if (petMode == "none")
+				return;
+			else if (petMode == "owner")
+				caster = target = player;
+			else
+				caster = target = attacker;
+		}
+		else
+		{
+			caster = target = player;
+		}
+		
+		caster->CastCustomSpell(target, SPELL_HEAL, &bp1, nullptr, nullptr, true);
     }
 };
 
